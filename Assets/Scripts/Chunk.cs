@@ -28,14 +28,14 @@ public class Chunk
 
     bool isChunkActive;
 
-    // Start is called before the first frame update
+    public bool isVoxelMapPopulated = false;
+    
     public Chunk(World worldReference, ChunkCoord positionChunk, bool generateOnLoad)
     {
         world = worldReference;
         coord = positionChunk;
         isActive = true;
-        IsVoxelMapPopulated = false;
-        chunkGameObject = new GameObject();
+
         if (generateOnLoad)
         {
             InitChunk();
@@ -44,7 +44,7 @@ public class Chunk
 
     public void InitChunk()
     {
-        //chunkGameObject = new GameObject();
+        chunkGameObject = new GameObject();
         meshFilter = chunkGameObject.AddComponent<MeshFilter>();
         meshRenderer = chunkGameObject.AddComponent<MeshRenderer>();
 
@@ -90,7 +90,7 @@ public class Chunk
             }
         }
 
-        IsVoxelMapPopulated = true;
+        isVoxelMapPopulated = true;
     }
 
     void AddCubeToChunk(Vector3 voxelPosition)
@@ -195,8 +195,6 @@ public class Chunk
             }
         }
     }
-
-    public bool IsVoxelMapPopulated { get; internal set; }
 
     public void EditVoxel(Vector3 voxelPosition, byte newBlockID)
     {

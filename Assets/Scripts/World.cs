@@ -72,7 +72,7 @@ public class World : MonoBehaviour
         if (!IsVoxelInWorld(voxelPosition) || !IsChunkInWorld(chunkCoord) || voxelPosition.y < 0 || voxelPosition.y > Chunk.CHUNK_HEIGHT)
             return false;
 
-        if (chunks[chunkCoord.x, chunkCoord.y] != null)
+        if (chunks[chunkCoord.x, chunkCoord.y] != null && chunks[chunkCoord.x, chunkCoord.y].isVoxelMapPopulated)
             return blockTypes[chunks[chunkCoord.x, chunkCoord.y].GetBlockTypeFromWorldVector3(voxelPosition)].isSolid;
 
         return blockTypes[GetVoxel(voxelPosition)].isSolid;
