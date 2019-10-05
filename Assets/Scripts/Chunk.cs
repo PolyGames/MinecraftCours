@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class Chunk
 {
-    public const int CHUNK_WIDTH = 4;
-    public const int CHUNK_HEIGHT = 4;
+    public const int CHUNK_WIDTH = 16;
+    public const int CHUNK_HEIGHT = 32;
 
     List<Vector3> meshVertices = new List<Vector3>();
     List<int> meshTriangles = new List<int>();
@@ -135,14 +135,7 @@ public class Chunk
 
         if (!IsVoxelInChunk(x, y, z))
         {
-            if (world.bypassRemovingInnerFacesChunks)
-            {
-                return false;
-            }
-            else
-            {
-                return world.CheckForVoxel(voxelPosition + position);
-            }
+            return world.CheckForVoxel(voxelPosition + position);
         }
 
         return world.blockTypes[voxelMap[x, y, z]].isSolid;

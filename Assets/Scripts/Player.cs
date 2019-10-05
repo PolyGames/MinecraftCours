@@ -9,9 +9,12 @@ public class Player : MonoBehaviour
     float vertical = 0;
     float mouseX = 0;
     float mouseY = 0;
+    bool jumpRequest = false;
 
     float rotationX = 0;
     float rotationY = 0;
+    float verticalMomentum = 0;
+    float colliderWidth = 0.3f;
 
     Vector3 movement;
 
@@ -26,6 +29,9 @@ public class Player : MonoBehaviour
     [SerializeField]
     Transform camera;
 
+    [SerializeField]
+    World world;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -37,6 +43,12 @@ public class Player : MonoBehaviour
     void Update()
     {
         GetPlayerInput();
+
+        if (jumpRequest)
+        {
+            Jump();
+        }
+
         UpdateMovement();
         UpdateRotation();
     }
@@ -51,11 +63,78 @@ public class Player : MonoBehaviour
         transform.rotation = Quaternion.Euler(0, rotationX, 0);
     }
 
+    void Jump()
+    {
+        verticalMomentum = 5f;
+        jumpRequest = false;
+    }
+
     void UpdateMovement()
     {
-        movement = (vertical * camera.transform.forward + horizontal * transform.right) * movementSpeed * Time.deltaTime;
+        movement = (vertical * transform.forward + horizontal * transform.right) * movementSpeed * Time.deltaTime;
+
+        if (verticalMomentum > World.GRAVITY)
+        {
+            verticalMomentum += World.GRAVITY * Time.fixedDeltaTime;
+        }
+        movement += Vector3.up * verticalMomentum * Time.fixedDeltaTime;
+
+        if (movement.y < 0)
+        {
+            movement.y = CheckDownSpeed(movement.y);
+        }
+
+        if ((movement.z > 0 && CheckFrontCollision()) || (movement.z < 0 && CheckBackCollision()))
+        {
+            movement.z = 0;
+        }
+        if ((movement.x > 0 && CheckRightCollision()) || (movement.x < 0 && CheckLeftCollision()))
+        {
+            movement.x = 0;
+        }
 
         transform.Translate(movement, Space.World);
+    }
+
+    float CheckDownSpeed(float currentMomentum)
+    {
+        Vector3 leftBack = new Vector3(transform.position.x - colliderWidth, transform.position.y + currentMomentum, transform.position.z - colliderWidth);
+        Vector3 rightBack = new Vector3(transform.position.x + colliderWidth, transform.position.y + currentMomentum, transform.position.z - colliderWidth);
+        Vector3 leftFront = new Vector3(transform.position.x - colliderWidth, transform.position.y + currentMomentum, transform.position.z + colliderWidth);
+        Vector3 rightFront = new Vector3(transform.position.x + colliderWidth, transform.position.y + currentMomentum, transform.position.z + colliderWidth);
+
+        if (world.CheckForVoxel(leftBack) || world.CheckForVoxel(rightBack) || world.CheckForVoxel(leftFront) || world.CheckForVoxel(rightFront))
+        {
+            return 0;
+        }
+        else
+        {
+            return currentMomentum;
+        }
+    }
+
+    bool CheckFrontCollision()
+    {
+        return (world.CheckForVoxel(new Vector3(transform.position.x, transform.position.y, transform.position.z + colliderWidth)) ||
+                world.CheckForVoxel(new Vector3(transform.position.x, transform.position.y + 1, transform.position.z + colliderWidth)));
+    }
+
+    bool CheckBackCollision()
+    {
+        return (world.CheckForVoxel(new Vector3(transform.position.x, transform.position.y, transform.position.z - colliderWidth)) ||
+                world.CheckForVoxel(new Vector3(transform.position.x, transform.position.y + 1, transform.position.z - colliderWidth)));
+    }
+
+    bool CheckRightCollision()
+    {
+        return (world.CheckForVoxel(new Vector3(transform.position.x + colliderWidth, transform.position.y, transform.position.z)) ||
+                world.CheckForVoxel(new Vector3(transform.position.x + colliderWidth, transform.position.y + 1, transform.position.z)));
+    }
+
+    bool CheckLeftCollision()
+    {
+        return (world.CheckForVoxel(new Vector3(transform.position.x - colliderWidth, transform.position.y, transform.position.z)) ||
+                world.CheckForVoxel(new Vector3(transform.position.x - colliderWidth, transform.position.y + 1, transform.position.z)));
     }
 
     void GetPlayerInput()
@@ -65,5 +144,10 @@ public class Player : MonoBehaviour
 
         mouseX = Input.GetAxis("Mouse X");
         mouseY = Input.GetAxis("Mouse Y");
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            jumpRequest = true;
+        }
     }
 }

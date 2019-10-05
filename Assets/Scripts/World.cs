@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class World : MonoBehaviour
 {
-    public const int WORLD_WIDTH_IN_CHUNKS = 5;
+    public static float GRAVITY = -9.8f;
+
+    public const int WORLD_WIDTH_IN_CHUNKS = 6;
 
     public Material material;
 
@@ -13,6 +15,9 @@ public class World : MonoBehaviour
     Chunk[,] chunks = new Chunk[WORLD_WIDTH_IN_CHUNKS, WORLD_WIDTH_IN_CHUNKS];
 
     public bool bypassRemovingInnerFacesChunks = true;
+
+    [SerializeField]
+    Transform playerTransform;
 
     public static int WORLD_WIDTH_IN_VOXELS
     {
@@ -23,6 +28,9 @@ public class World : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        playerTransform.position = new Vector3(WORLD_WIDTH_IN_CHUNKS * Chunk.CHUNK_WIDTH /2f,
+                                               Chunk.CHUNK_HEIGHT - 2,
+                                               WORLD_WIDTH_IN_CHUNKS * Chunk.CHUNK_WIDTH / 2f);
         GenerateWorld();
     }
 
@@ -56,10 +64,10 @@ public class World : MonoBehaviour
                (chunkPosition.x < WORLD_WIDTH_IN_CHUNKS && chunkPosition.y < WORLD_WIDTH_IN_CHUNKS);
     }
 
-    bool IsVoxelInWorld(Vector3 pos)
+    bool IsVoxelInWorld(Vector3 voxelPositionWorld)
     {
-        return (pos.x >= 0 && pos.y >= 0 && pos.z >= 0) &&
-               (pos.x < WORLD_WIDTH_IN_VOXELS && pos.y < Chunk.CHUNK_HEIGHT && pos.z < WORLD_WIDTH_IN_VOXELS);
+        return (voxelPositionWorld.x >= 0 && voxelPositionWorld.y >= 0 && voxelPositionWorld.z >= 0) &&
+               (voxelPositionWorld.x < WORLD_WIDTH_IN_VOXELS && voxelPositionWorld.y < Chunk.CHUNK_HEIGHT && voxelPositionWorld.z < WORLD_WIDTH_IN_VOXELS);
     }
 
     public byte GetVoxel(Vector3 voxelPosition)
@@ -67,10 +75,34 @@ public class World : MonoBehaviour
         if (!IsVoxelInWorld(voxelPosition))
             return 0;
 
-        if ((voxelPosition.x + voxelPosition.y + voxelPosition.z) % 2 == 0)
-            return 1;
-        else
-            return 1;
+        int y = Mathf.FloorToInt(voxelPosition.y);
+
+        if (y == 0)
+        {
+            return 4;
+        }
+
+        int terrainHeight = Mathf.FloorToInt(Chunk.CHUNK_HEIGHT * 
+                                Noise.Get2DNoise(new Vector2(voxelPosition.x, voxelPosition.z), 0, 0.25f));
+        byte blockType = 0;
+
+        if (y == terrainHeight)
+        {
+            blockType = 1;
+        }
+        if (y < terrainHeight)
+        {
+            if (y < terrainHeight - 5)
+            {
+                blockType = 3;
+            }
+            else
+            {
+                blockType = 2;
+            }
+        }
+
+        return blockType;
     }
 }
 
