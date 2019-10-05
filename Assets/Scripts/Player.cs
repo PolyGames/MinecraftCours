@@ -53,11 +53,9 @@ public class Player : MonoBehaviour
 
     void UpdateMovement()
     {
-        movement = (vertical * transform.forward + horizontal * transform.right) * movementSpeed * Time.deltaTime;
+        movement = (vertical * camera.transform.forward + horizontal * transform.right) * movementSpeed * Time.deltaTime;
 
         transform.Translate(movement, Space.World);
-
-        //playerRigidbody.velocity = movement;
     }
 
     void GetPlayerInput()

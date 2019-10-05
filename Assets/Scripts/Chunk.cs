@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class Chunk
 {
-    public const int CHUNK_WIDTH = 8;
-    public const int CHUNK_HEIGHT = 8;
+    public const int CHUNK_WIDTH = 4;
+    public const int CHUNK_HEIGHT = 4;
 
     List<Vector3> meshVertices = new List<Vector3>();
     List<int> meshTriangles = new List<int>();
@@ -60,7 +60,7 @@ public class Chunk
         }
     }
 
-    void InitializeVoxelMap()
+    void InitializeVoxelMap() // Pour être optimal, doit être fait pour tous les chunks avant même de créer les meshes
     {
         for (int i = 0; i < CHUNK_WIDTH; i++)
         {
@@ -68,7 +68,7 @@ public class Chunk
             {
                 for (int k = 0; k < CHUNK_WIDTH; k++)
                 {
-                    voxelMap[i, j, k] = 1;
+                    voxelMap[i, j, k] = world.GetVoxel(new Vector3(i, j, k) + position);
                 }
             }
         }
@@ -133,8 +133,17 @@ public class Chunk
         int y = Mathf.FloorToInt(voxelPosition.y);
         int z = Mathf.FloorToInt(voxelPosition.z);
 
-        if (!IsVoxelInChunk(voxelPosition))
-            return world.CheckForVoxel(voxelPosition + position);
+        if (!IsVoxelInChunk(x, y, z))
+        {
+            if (world.bypassRemovingInnerFacesChunks)
+            {
+                return false;
+            }
+            else
+            {
+                return world.CheckForVoxel(voxelPosition + position);
+            }
+        }
 
         return world.blockTypes[voxelMap[x, y, z]].isSolid;
     }
@@ -151,10 +160,10 @@ public class Chunk
         return voxelMap[x, y, z];
     }
 
-    bool IsVoxelInChunk(Vector3 voxelPosition)
+    bool IsVoxelInChunk(int x, int y, int z)
     {
-        return (voxelPosition.x >= 0 && voxelPosition.y >= 0 && voxelPosition.z >= 0) &&
-               (voxelPosition.x < CHUNK_WIDTH - 1 && voxelPosition.y < CHUNK_HEIGHT - 1 && voxelPosition.z < CHUNK_WIDTH - 1);
+        return (x >= 0 && y >= 0 && z >= 0) &&
+               (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_WIDTH);
     }
 
     public Vector3 position
@@ -163,6 +172,9 @@ public class Chunk
     }
 }
 
+/// <summary>
+/// Classe qui représente la position des chunks selon le tableau de chunks du world
+/// </summary>
 public class ChunkCoord
 {
     public int x;

@@ -4,13 +4,21 @@ using UnityEngine;
 
 public class World : MonoBehaviour
 {
-    public const int WORLD_WIDTH_IN_CHUNKS = 8;
+    public const int WORLD_WIDTH_IN_CHUNKS = 5;
 
     public Material material;
 
     public BlockType[] blockTypes;
 
     Chunk[,] chunks = new Chunk[WORLD_WIDTH_IN_CHUNKS, WORLD_WIDTH_IN_CHUNKS];
+
+    public bool bypassRemovingInnerFacesChunks = true;
+
+    public static int WORLD_WIDTH_IN_VOXELS
+    {
+        get { return WORLD_WIDTH_IN_CHUNKS * Chunk.CHUNK_WIDTH; }
+
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -33,24 +41,36 @@ public class World : MonoBehaviour
     {
         ChunkCoord chunkCoord = new ChunkCoord(voxelPosition);
 
-        if (!IsChunkInWorld(chunkCoord) || voxelPosition.y < 0 || voxelPosition.y >= Chunk.CHUNK_HEIGHT)
+        if (!IsChunkInWorld(chunkCoord) || voxelPosition.y < 0 || voxelPosition.y > Chunk.CHUNK_HEIGHT)
             return false;
 
         if (chunks[chunkCoord.x, chunkCoord.y] != null)
-            return blockTypes[(int)chunks[chunkCoord.x, chunkCoord.y].GetBlockTypeFromWorldVector3(voxelPosition)].isSolid;
+            return blockTypes[chunks[chunkCoord.x, chunkCoord.y].GetBlockTypeFromWorldVector3(voxelPosition)].isSolid;
 
-        return blockTypes[(int)GetVoxel(voxelPosition)].isSolid;
+        return blockTypes[GetVoxel(voxelPosition)].isSolid;
     }
 
     bool IsChunkInWorld(ChunkCoord chunkPosition)
     {
         return (chunkPosition.x >= 0 && chunkPosition.y >= 0) &&
-               (chunkPosition.x < WORLD_WIDTH_IN_CHUNKS - 1 && chunkPosition.y < WORLD_WIDTH_IN_CHUNKS - 1);
+               (chunkPosition.x < WORLD_WIDTH_IN_CHUNKS && chunkPosition.y < WORLD_WIDTH_IN_CHUNKS);
+    }
+
+    bool IsVoxelInWorld(Vector3 pos)
+    {
+        return (pos.x >= 0 && pos.y >= 0 && pos.z >= 0) &&
+               (pos.x < WORLD_WIDTH_IN_VOXELS && pos.y < Chunk.CHUNK_HEIGHT && pos.z < WORLD_WIDTH_IN_VOXELS);
     }
 
     public byte GetVoxel(Vector3 voxelPosition)
     {
-        return 1;
+        if (!IsVoxelInWorld(voxelPosition))
+            return 0;
+
+        if ((voxelPosition.x + voxelPosition.y + voxelPosition.z) % 2 == 0)
+            return 1;
+        else
+            return 1;
     }
 }
 

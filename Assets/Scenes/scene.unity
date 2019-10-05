@@ -282,6 +282,7 @@ MonoBehaviour:
     bottomFaceTextureID: 9
     leftFaceTextureID: 9
     rightFaceTextureID: 9
+  bypassRemovingInnerFacesChunks: 0
 --- !u!4 &1135766632
 Transform:
   m_ObjectHideFlags: 0
