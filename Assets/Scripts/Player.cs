@@ -10,6 +10,7 @@ public class Player : MonoBehaviour
     float mouseX = 0;
     float mouseY = 0;
     bool jumpRequest = false;
+    bool isGrounded = false;
 
     float rotationX = 0;
     float rotationY = 0;
@@ -17,8 +18,6 @@ public class Player : MonoBehaviour
     float colliderWidth = 0.3f;
 
     Vector3 movement;
-
-    Rigidbody playerRigidbody;
 
     [SerializeField]
     float movementSpeed = 3;
@@ -30,20 +29,76 @@ public class Player : MonoBehaviour
     Transform camera;
 
     [SerializeField]
+    Transform blockHighlight;
+
+    Vector3 placeBlockPosition;
+
+    float checkIncrement = 0.1f;
+    float reach = 8;
+
+    [SerializeField]
     World world;
 
     // Start is called before the first frame update
     void Start()
     {
+        Cursor.lockState = CursorLockMode.Locked;
         movement = new Vector3();
-        playerRigidbody = GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
     void Update()
     {
         GetPlayerInput();
+        if (blockHighlight.gameObject.activeSelf)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                // destroy block
+                world.GetChunkFromVector3(blockHighlight.position).EditVoxel(blockHighlight.position, 0);
+            }
 
+            if (Input.GetMouseButtonDown(1))
+            {
+                // place block
+                world.GetChunkFromVector3(placeBlockPosition).EditVoxel(placeBlockPosition, 1);
+
+            }
+        }
+
+        PlaceBlockHighlight();
+    }
+
+    void PlaceBlockHighlight()
+    {
+        float step = checkIncrement;
+        Vector3 lastPlacePosition = new Vector3();
+
+        while (step < reach)
+        {
+            Vector3 placePosition = camera.position + (camera.forward * step);
+
+            if (world.CheckForVoxel(placePosition))
+            {
+                blockHighlight.gameObject.SetActive(true);
+                blockHighlight.position = new Vector3(Mathf.FloorToInt(placePosition.x),
+                                                      Mathf.FloorToInt(placePosition.y),
+                                                      Mathf.FloorToInt(placePosition.z));
+                placeBlockPosition = lastPlacePosition;
+                return;
+            }
+
+            lastPlacePosition = new Vector3(Mathf.FloorToInt(placePosition.x),
+                                            Mathf.FloorToInt(placePosition.y),
+                                            Mathf.FloorToInt(placePosition.z));
+            step += checkIncrement;
+        }
+
+        blockHighlight.gameObject.SetActive(false);
+    }
+
+    void FixedUpdate()
+    {
         if (jumpRequest)
         {
             Jump();
@@ -67,6 +122,7 @@ public class Player : MonoBehaviour
     {
         verticalMomentum = 5f;
         jumpRequest = false;
+        isGrounded = false;
     }
 
     void UpdateMovement()
@@ -105,10 +161,12 @@ public class Player : MonoBehaviour
 
         if (world.CheckForVoxel(leftBack) || world.CheckForVoxel(rightBack) || world.CheckForVoxel(leftFront) || world.CheckForVoxel(rightFront))
         {
+            isGrounded = true;
             return 0;
         }
         else
         {
+            isGrounded = false;
             return currentMomentum;
         }
     }
@@ -145,7 +203,7 @@ public class Player : MonoBehaviour
         mouseX = Input.GetAxis("Mouse X");
         mouseY = Input.GetAxis("Mouse Y");
 
-        if (Input.GetButtonDown("Jump"))
+        if (isGrounded && Input.GetButtonDown("Jump"))
         {
             jumpRequest = true;
         }

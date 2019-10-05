@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,7 +7,8 @@ public class World : MonoBehaviour
 {
     public static float GRAVITY = -9.8f;
 
-    public const int WORLD_WIDTH_IN_CHUNKS = 6;
+    public const int WORLD_WIDTH_IN_CHUNKS = 200;
+    public const int VIEW_DISTANCE_IN_CHUNKS = 15;
 
     public Material material;
 
@@ -18,6 +20,14 @@ public class World : MonoBehaviour
 
     [SerializeField]
     Transform playerTransform;
+
+    ChunkCoord playerChunkCoord;
+    ChunkCoord playerLastChunkCoord;
+
+    List<ChunkCoord> activeChunks = new List<ChunkCoord>();
+    List<ChunkCoord> chunksToCreate = new List<ChunkCoord>();
+
+    bool isCreatingChunks;
 
     public static int WORLD_WIDTH_IN_VOXELS
     {
@@ -32,15 +42,25 @@ public class World : MonoBehaviour
                                                Chunk.CHUNK_HEIGHT - 2,
                                                WORLD_WIDTH_IN_CHUNKS * Chunk.CHUNK_WIDTH / 2f);
         GenerateWorld();
+        playerLastChunkCoord = new ChunkCoord(playerTransform.position);
+    }
+
+    public Chunk GetChunkFromVector3(Vector3 worldPosition)
+    {
+        int x = Mathf.FloorToInt(worldPosition.x / Chunk.CHUNK_WIDTH);
+        int y = Mathf.FloorToInt(worldPosition.z / Chunk.CHUNK_WIDTH);
+
+        return chunks[x, y];
     }
 
     void GenerateWorld()
     {
-        for (int i = 0; i < WORLD_WIDTH_IN_CHUNKS; i++)
+        for (int i = (WORLD_WIDTH_IN_CHUNKS / 2) - VIEW_DISTANCE_IN_CHUNKS; i < (WORLD_WIDTH_IN_CHUNKS / 2) + VIEW_DISTANCE_IN_CHUNKS; i++)
         {
-            for (int j = 0; j < WORLD_WIDTH_IN_CHUNKS; j++)
+            for (int j = (WORLD_WIDTH_IN_CHUNKS / 2) - VIEW_DISTANCE_IN_CHUNKS; j < (WORLD_WIDTH_IN_CHUNKS / 2) + VIEW_DISTANCE_IN_CHUNKS; j++)
             {
-                chunks[i, j] = new Chunk(this, new ChunkCoord(i, j));
+                chunks[i, j] = new Chunk(this, new ChunkCoord(i, j), true);
+                activeChunks.Add(new ChunkCoord(i, j));
             }
         }
     }
@@ -49,7 +69,7 @@ public class World : MonoBehaviour
     {
         ChunkCoord chunkCoord = new ChunkCoord(voxelPosition);
 
-        if (!IsChunkInWorld(chunkCoord) || voxelPosition.y < 0 || voxelPosition.y > Chunk.CHUNK_HEIGHT)
+        if (!IsVoxelInWorld(voxelPosition) || !IsChunkInWorld(chunkCoord) || voxelPosition.y < 0 || voxelPosition.y > Chunk.CHUNK_HEIGHT)
             return false;
 
         if (chunks[chunkCoord.x, chunkCoord.y] != null)
@@ -103,6 +123,76 @@ public class World : MonoBehaviour
         }
 
         return blockType;
+    }
+
+    void Update()
+    {
+        playerChunkCoord = new ChunkCoord(playerTransform.position);
+        if (!playerChunkCoord.Equals(playerLastChunkCoord))
+        {
+            CheckViewDistance();
+        }
+
+        if (chunksToCreate.Count > 0 && !isCreatingChunks)
+        {
+            StartCoroutine("CreateChunks");
+        }
+    }
+
+    IEnumerator CreateChunks()
+    {
+        isCreatingChunks = true;
+
+        while (chunksToCreate.Count > 0)
+        {
+            chunks[chunksToCreate[0].x, chunksToCreate[0].y].InitChunk();
+            chunksToCreate.RemoveAt(0);
+
+            yield return null;
+        }
+
+        isCreatingChunks = false;
+    }
+
+    void CheckViewDistance()
+    {
+        playerLastChunkCoord = playerChunkCoord;
+
+        List<ChunkCoord> previouslyActiveChunks = new List<ChunkCoord>(activeChunks);
+
+        for (int i = playerChunkCoord.x - VIEW_DISTANCE_IN_CHUNKS; i < playerChunkCoord.x + VIEW_DISTANCE_IN_CHUNKS; i++)
+        {
+            for (int j = playerChunkCoord.y - VIEW_DISTANCE_IN_CHUNKS; j < playerChunkCoord.y + VIEW_DISTANCE_IN_CHUNKS; j++)
+            {
+                ChunkCoord currentCoord = new ChunkCoord(i, j);
+                if (IsChunkInWorld(currentCoord))
+                {
+                    if (chunks[i, j] == null)
+                    {
+                        chunks[i, j] = new Chunk(this, currentCoord, false);
+                        chunksToCreate.Add(currentCoord);
+                    }
+                    else if (!chunks[i, j].isActive)
+                    {
+                        chunks[i, j].isActive = true;
+                    }
+                    activeChunks.Add(currentCoord);
+
+                    for (int k = 0; k < previouslyActiveChunks.Count; k++)
+                    {
+                        if (previouslyActiveChunks[k].Equals(currentCoord))
+                        {
+                            previouslyActiveChunks.RemoveAt(k);
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach (ChunkCoord chunk in previouslyActiveChunks)
+        {
+            chunks[chunk.x, chunk.y].isActive = false;
+        }
     }
 }
 
